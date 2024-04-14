@@ -34,8 +34,13 @@ def model_predict(img_data, interpreter):
     # Get the output tensor
     output = interpreter.get_tensor(output_details[0]['index'])
     pred_class_index = np.argmax(output)
+    classes = ['AD', 'CN', 'EMCI', 'LMCI']
+    pred_class = classes[pred_class_index]
+    prob = round(float(output[0, pred_class_index]), 2)
 
-    return pred_class_index
+    # Format predictions
+    results = [{"class": pred_class, "probability": prob}]
+    return results
 
 # Main Streamlit app
 def main():
@@ -54,23 +59,19 @@ def main():
         img = Image.open(uploaded_file)
 
         # Make prediction
-        preds = model_predict(img, interpreter)  # Here, pass the Interpreter object directly
+        result = model_predict(img, interpreter)
 
         # Process your result for human
-        class_names = ['AD', 'CN', 'EMCI', 'LMCI']
-        pred_class = class_names[preds]
-
-        st.success(f"The predicted class is: {pred_class}")
+        if result:
+            st.success(f"The predicted class is: {result[0]['class']} with probability: {result[0]['probability']}")
 
 # Define API endpoint for prediction
 @app.route('/predict', methods=['POST'])
 def predict():
     file = request.files['file']
     img = Image.open(file)
-    preds = model_predict(img, interpreter)
-    class_names = ['AD', 'CN', 'EMCI', 'LMCI']
-    pred_class = class_names[preds]
-    return jsonify({'predicted_class': pred_class})
+    result = model_predict(img, interpreter)
+    return jsonify(result)
 
 # Run the Flask app
 if __name__ == '__main__':
